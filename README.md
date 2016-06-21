@@ -5,7 +5,7 @@ This is my high throughput, command-line GC-MS analysis pipeline. It is built on
 
 The pipeline requires the installation of Python 2.7 and all PyMS dependencies (see PyMS_UserGuide.pdf for dependencies instructions). The PyMS lib in this repository (/lib) should be used instead of the original PyMS library, as it has a few extra features and bug fixes.
 
-The pipeline functions are found in GCMSalign.py. 
+The pipeline functions are found in GCMSalign.py. Currently parameters and paths are 'hardcoded' and functions are called from the python console. This will change in the near future with a command line interface being implemented.
 
 TO DO
 -----
