@@ -16,6 +16,7 @@ peak_parser.add_argument('-N', '--minions', required=False, default=4, help='pea
 peak_parser.add_argument('-R', '--minintensity', required=False, default=5, help='peak calling: min intensity (percent) of an ion relative to max peak intensity for that ion to be included in the peak', type=int)
 peak_parser.add_argument('-M', '--noisemult', required=False, default=4, help='peak calling: total peak intensity must be at least this multiple of the base noise level to be called. Higher multiple means fewer peaks called', type=int)
 peak_parser.add_argument('-I', '--topions', required=False, default=10, help='from the list of most important ions in a peak, how many should be outputted as a mini mass-spec?', type=int)
+peak_parser.add_argument('-T', '--threads', required=False, default=1, help='number of threads to use. Currently only multithreaded on linux!', type=int)
 
 align_parser = subparsers.add_parser('align', help='align help', description="run the peak aligner on a directory of .expr files", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 align_parser.set_defaults(which='align')
