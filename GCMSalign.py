@@ -7,20 +7,20 @@ Created on Fri Sep  6 16:06:16 2013
 @note: I Modified the PyMS Alignment class in pyms.Peak.List.DPA.class by adding
         a function write_ion_areas_csv(self, ms_file_name, minutes=True). This function
         outputs the top 20 ions and ion areas for each peak in the alignment matrix.
+
+@note: Added a JCAMP-DX reader. This can read JDX files that are output from OpenChrom
 """
 
-import sys, os
-
-from pyms.GCMS.IO.JCAMP.Function import JCAMP_reader, JCAMP_OpenChrom_reader
-from pyms.GCMS.Function import build_intensity_matrix_i, build_intensity_matrix
-from pyms.Noise.SavitzkyGolay import savitzky_golay, savitzky_golay_im
-from pyms.Baseline.TopHat import tophat, tophat_im
+import sys, os, datetime, traceback, glob
+import pyms.GCMS.IO.JCAMP.Function
+from pyms.GCMS.Function import build_intensity_matrix_i
+from pyms.Noise.SavitzkyGolay import *
+from pyms.Baseline.TopHat import tophat
 from pyms.Noise.Analysis import window_analyzer
 from pyms.Peak.Class import Peak
 from pyms.Peak.Function import peak_sum_area, peak_top_ion_areas
 
-from pyms.Deconvolution.BillerBiemann.Function import BillerBiemann, \
-    rel_threshold, num_ions_threshold, sum_maxima
+from pyms.Deconvolution.BillerBiemann.Function import BillerBiemann, rel_threshold, num_ions_threshold, sum_maxima
 
 from pyms.Experiment.Class import Experiment
 from pyms.Experiment.IO import store_expr, load_expr
@@ -32,50 +32,233 @@ from pyms.Display.Class import *
 
 import multiprocessing as mp
 
-filetype = 'CDF'
-numthreads = 16
-
-window = 9  # width of window over which local ion maxima are detected
-scans = 3  # distance at which locally apexing ions can be combined into one peak
-n = 4  # min number of ions with intensity above a threshold
-r = 5  # min percentage of mass intensity relative to max peak intensity
-top_ions = 20
-noise_mult = 4  # peak intensity must be at least this multiple of noise level to be called
-Dw = 2.5  # Within state (local) alignment rt modlation [s] (i think this is tolerance of RT shift?)
-Gw = 0.45  # Within state local alignment gap penalty. Lower G is preferable as higher G favours peak-mixing
-Db = 0.50  # Between state (global) rt modulation [s]
-Gb = 0.40  # Between state (global) gap penalty
-
-output_prefix = "H3_blanks"
-
-# define path to data files
-base_path='/short/xf1/GCMS/H3_blanks/'
-#sys.path.append(base_path)
-expr_dir = base_path + "PyMS_out_" + output_prefix + "/"
-os.chdir(base_path)
+#window = 9  # width of window over which local ion maxima are detected
+#scans = 3  # distance at which locally apexing ions can be combined into one peak
+#n = 4  # min number of ions with intensity above a threshold
+#r = 5  # min percentage of mass intensity relative to max peak intensity
+#top_ions = 20
+#noise_mult = 4  # peak intensity must be at least this multiple of noise level to be called
+#Dw = 2.5  # Within state (local) alignment rt modlation [s] (i think this is tolerance of RT shift?)
+#Gw = 0.45  # Within state local alignment gap penalty. Lower G is preferable as higher G favours peak-mixing
+#Db = 0.50  # Between state (global) rt modulation [s]
+#Gb = 0.40  # Between state (global) gap penalty
 
 
-def load_run(filename):
+outdir = ""
+exprdir = ""
 
+# this is the peak detection only pipeline
+def detect(args):
+
+    # define path to data files
+    global outdir
+    outdir = os.path.join(args.indir, 'easyGC_out')
+    print outdir
+
+    global exprdir
+    exprdir = os.path.join(outdir,"expr")
+    print exprdir
+
+    if os.path.isdir(outdir) == False:
+        os.mkdir(outdir)
+
+    os.chdir(args.indir)
+    runlist = []
+    for file in glob.glob("*."+args.ftype):
+        print file
+        runlist.append(file)
+
+    print runlist
+    exprlist = detect_peaks(runlist, args)
+
+
+
+# this is the alignment-only pipeline
+def align(args):
+    global exprdir
+    exprdir = args.exprdir
+    print exprdir
+
+    exprlist = load_expr_list()
+    multi_align_local(exprlist, args.distance, args.gap, args.mincommon, tofile=True)
+
+
+
+
+# this is the full pipeline
+def detect_and_align(args, chunked=False, numchunks=1):
+
+    # define path to data files
+    global outdir
+    outdir = os.path.join(args.indir, 'easyGC_out')
+    print outdir
+
+    global exprdir
+    exprdir = os.path.join(outdir,"expr")
+    print exprdir
+
+    if os.path.isdir(outdir) == False:
+        os.mkdir(outdir)
+
+    os.chdir(args.indir)
+    runlist = []
+    for file in glob.glob("*."+args.ftype):
+        print file
+        runlist.append(file)
+
+    print runlist
+
+    if chunked == False:
+        exprlist = detect_peaks(runlist, args)
+        multi_align_local(exprlist, args.distance, args.gap, args.mincommon, tofile=True)
+    else:
+        alignments = list()
+        chunked_list = chunks(runlist, len(runlist) / numchunks)
+        for chunk in chunked_list:
+            expr_list = detect_peaks(chunk)
+            alignments.append(multi_align_local(expr_list, Dw, Gw, args.mincommon, tofile=False))
+        multi_align_global(alignments, Db, Gb, args.mincommon * 4, tofile=True)
+
+
+# loop over all runs and store the peaks as 'experiments'
+# within replicates alignment parameters
+def detect_peaks(runs, args):
+
+
+    expr_list = []
+    if os.path.isdir(exprdir) == False:
+        os.mkdir(exprdir)
+
+    from sys import platform as _platform
+    if _platform == "linux" or _platform == "linux2":
+        # linux, so we can set up multiprocessing
+        pool = mp.Pool(processes=args.threads)
+        results = [pool.apply_async(detect_one_run, args=(r,args,)) for r in runs]
+        expr_list = [p.get() for p in results]
+        try:
+            pool.terminate()
+        except Exception, e:
+            print str(e)
+            sys.exit()
+    elif _platform == "win32" or _platform == "win64":
+        # windows, so just go one at a time....dammit
+        for run in runs:
+            try:
+                pl = detect_one_run(run, args)
+                expr = store_as_expr(run, pl, args)
+                expr_list.append(expr)
+            except:
+                print "run failed: ", run
+                traceback.print_exc()
+
+    return expr_list
+
+def detect_one_run(run, args):
+    infile = os.path.join(args.indir, run)
+    print "processing GC-MS file:", infile
+
+   # sys.stdout("processing GCSM run:", run)
+
+    # load the input GC-MS file
     try:
-        in_file = os.path.join(base_path, filetype+'/',filename+"."+filetype)
-        if filetype == 'CDF':
+        if args.ftype == 'CDF':
             from pyms.GCMS.IO.ANDI.Function import ANDI_reader
-            data = ANDI_reader(in_file)
-        elif filetype == 'JDX':
+            data = ANDI_reader(infile)
+        elif args.ftype == 'JDX':
             #data = JCAMP_reader(in_file)
-            data = JCAMP_OpenChrom_reader(in_file)
+            data = pyms.GCMS.IO.JCAMP.Function.JCAMP_OpenChrom_reader(infile)
         else:
             raise ValueError('can only load ANDI (CDF) or JDX files!')
     except:
-        print "Failure to load input file ", filename
+        print "Failure to load input file ", infile
     else:
-        data.trim("4.0m", "20.0m")
+        data.trim(args.trimstart+"m",args.trimend+"m")
         # get TIC. Would prefer to get from smoothed IM but API is faulty!
         tic = data.get_tic()
         # integer mass
-        return build_intensity_matrix_i(data), tic
-        # return build_intensity_matrix(data), tic
+        im = build_intensity_matrix_i(data)
+
+        # would be nice to do noise_mult*noise_level using the noise level AFTER smoothing,
+        # but i can't seem to get the TIC for the smoothed IM.
+        peak_list = call_peaks(im, tic, True, args)
+        return peak_list
+
+
+
+
+"""
+Some useful Savitzky-Golay info: The width of the windows and the order of the polynomial can be changed so it
+fits the noise level and complexity of the raw data, e.g., high noise levels require a wider
+window (default=7), while high complexity in data requires a higher order polynomial (default=2).
+
+The Durbin-Watson Classifier in OpenChrom can be used to determine the best width and order to use. A DW of 2.0 is optimal
+"""
+def call_peaks(im, tic, smooth, args):
+    print "calling peaks"
+    if smooth:
+        print "Smoothing IM first..."
+        im.crop_mass(53, 198)
+        print "cropped masses..."
+        # get the size of the intensity matrix
+        n_scan, n_mz = im.get_size()
+        print "# masses in intensity matrix: ", n_mz
+        # smooth data
+        for ii in range(n_mz):
+            ic = im.get_ic_at_index(ii)
+            #print "got ic for mass ", ii
+            # ic1 = savitzky_golay(ic)
+            ic_smooth = savitzky_golay(ic, window=args.window, degree=3)
+            #print "savitky golay ran "
+            ic_base = tophat(ic_smooth, struct="1.0m")
+            #print "tophat ran "
+            im.set_ic_at_index(ii, ic_base)
+            #print "smoothed mass ", ii
+        print "smoothed IM..."
+        # noise level calc
+        tic1 = savitzky_golay(tic)
+        tic2 = tophat(tic1, struct="1.0m")
+        noise_level = window_analyzer(tic2)
+        print "Noise level in TIC: ", noise_level
+
+
+    # get the list of Peak objects using BB peak detection / deconv
+    pl = BillerBiemann(im, args.window, args.scans)
+    print "Initial number of Peaks found:", len(pl)
+
+
+    # filter down the peaks.
+    #   - First: remove any masses from each peak that have intensity less than r percent of the max intensity in that peak
+    #   - Second: remove any peak where there are less than n ions with intensity above the cutoff
+    pl2 = rel_threshold(pl, percent=args.minintensity)
+    pl3 = num_ions_threshold(pl2, n=args.minions, cutoff=noise_level * args.noisemult)
+    print "Peaks remaining after filtering:", len(pl3)
+
+    for peak in pl3:
+        peak.null_mass(73)
+        # peak.null_mass(207)
+        peak.null_mass(84)
+
+        area = peak_sum_area(im, peak)  # get the TIC area for this peak
+        peak.set_area(area)
+        area_dict = peak_top_ion_areas(im, peak, args.topions)  # get top n ion areas for this peak
+        peak.set_ion_areas(area_dict)
+
+    return pl3
+
+# creates an Experiment from a GCMS run and  writes it to a .expr file
+def store_as_expr(run, peak_list, args):
+    # create an experiment
+    print "creating expression file for run ",run
+    expr = Experiment(run, peak_list)
+    print "created expression file "
+    # set time range for all experiments
+    expr.sele_rt_range([args.trimstart+"m", args.trimend+"m"])
+
+    filename, fileext = os.path.splitext(run)
+    print "storing expression file at", os.path.join(exprdir,(filename+".expr"))
+    store_expr( os.path.join(exprdir,(filename+".expr")), expr )
+
+    return expr
 
 
 def load_expr_list_from_runlist(runs):
@@ -88,100 +271,59 @@ def load_expr_list_from_runlist(runs):
     return el
 
 
-import glob
-
-
 def load_expr_list():
     # loads expr list from a directory of exprs
+    global exprdir
     el = []
-    filelist = glob.glob(expr_dir + '*.expr')
-    for f in filelist:
-        expr = load_expr(f)
+
+    for file in glob.glob( os.path.join(exprdir, '*.expr') ):
+        print file
+        expr = load_expr(file)
         el.append(expr)
 
     return el
 
-"""
-Some useful Savitzky-Golay info: The width of the windows and the order of the polynomial can be changed so it
-fits the noise level and complexity of the raw data, e.g., high noise levels require a wider
-window (default=7), while high complexity in data requires a higher order polynomial (default=2).
-
-The Durbin-Watson Classifier in OpenChrom can be used to determine the best width and order to use. A DW of 2.0 is optimal
-"""
-def call_peaks(im, tic, smooth, window, scans, ions, noisemult):
-    if smooth:
-        print "Smoothing IM first..."
-        im.crop_mass(53, 198)
-
-        # get the size of the intensity matrix
-        n_scan, n_mz = im.get_size()
-
-        # smooth data
-        for ii in range(n_mz):
-            ic = im.get_ic_at_index(ii)
-            # ic1 = savitzky_golay(ic)
-            ic_smooth = savitzky_golay(ic, window=9, degree=3)
-            ic_base = tophat(ic_smooth, struct="1.0m")
-            im.set_ic_at_index(ii, ic_base)
-
-        # noise level calc
-        tic1 = savitzky_golay(tic)
-        tic2 = tophat(tic1, struct="1.0m")
-        noise_level = window_analyzer(tic2)
-        print "Noise level in TIC: ", noise_level
-
-
-        # get the list of Peak objects using BB peak detection / deconv
-    pl = BillerBiemann(im, window, scans)
-    print "Initial number of Peaks found:", len(pl)
 
 
 
-    # filter down the peaks.
-    #   - First: remove any masses from each peak that have intensity less than r percent of the max intensity in that peak
-    #   - Second: remove any peak where there are less than n ions with intensity above the cutoff
-    pl2 = rel_threshold(pl, percent=r)
-    pl3 = num_ions_threshold(pl2, n=ions, cutoff=noise_level * noisemult)
-    print "Peaks remaining after filtering:", len(pl3)
+def load_run(infile):
 
-    for peak in pl3:
-        peak.null_mass(73)
-        # peak.null_mass(207)
-	peak.null_mass(84)
-        area = peak_sum_area(im, peak)  # get the TIC area for this peak
-        peak.set_area(area)
-        area_dict = peak_top_ion_areas(im, peak, top_ions)  # get top n ion areas for this peak
-        peak.set_ion_areas(area_dict)
-
-    return pl3
-
-
-# creates an Experiment from a GCMS run and optionally writes it to a .expr file
-def store_as_expr(run, peak_list, tofile):
-    # create an experiment
-    expr = Experiment(run, peak_list)
-
-    # set time range for all experiments
-    expr.sele_rt_range(["4.0m", "20.0m"])
-    if tofile == True:
-        store_expr(expr_dir + run + ".expr", expr)
-
-    return expr
-
+    try:
+        if args.ftype == 'CDF':
+            from pyms.GCMS.IO.ANDI.Function import ANDI_reader
+            data = ANDI_reader(infile)
+        elif args.ftype == 'JDX':
+            #data = JCAMP_reader(in_file)
+            data = pyms.GCMS.IO.JCAMP.Function.JCAMP_OpenChrom_reader(infile)
+        else:
+            raise ValueError('can only load ANDI (CDF) or JDX files!')
+    except:
+        print "Failure to load input file ", infile
+    else:
+        data.trim("4.0m", "20.0m")
+        # get TIC. Would prefer to get from smoothed IM but API is faulty!
+        tic = data.get_tic()
+        # integer mass
+        return build_intensity_matrix_i(data), tic
+        # return build_intensity_matrix(data), tic
 
 # takes a list of Experiment objects and does a pairwise alignment. Optionally writes RTs, Areas and Ions to file.
-def multi_align_local(expr_list, Dw, Gw, min_common=1, tofile=False):
-    print "locally aligning peaks from expr: ", expr_list
-    F1 = exprl2alignment(expr_list)
+def multi_align_local(exprlist, Dw, Gw, min_common=1, tofile=False):
+    global exprdir
+    global outdir
+    out_prefix = (datetime.datetime.now()).strftime("%Y-%m-%d-%H%M")
+
+    print "locally aligning peaks from expr: ", exprlist
+    F1 = exprl2alignment(exprlist)
     T1 = PairwiseAlignment(F1, Dw, Gw)
     A1 = align_with_tree(T1, min_peaks=min_common)
 
     if tofile == True:
         ci_list = A1.common_ion()
-        A1.write_csv_dk(expr_dir + output_prefix + 'aligned_rt.csv', expr_dir + output_prefix + 'aligned_area.csv')
+        A1.write_csv_dk( os.path.join(exprdir, out_prefix + '_aligned_rt.csv'), os.path.join(exprdir, out_prefix + '_aligned_area.csv') )
         #A1.write_csv(expr_dir + output_prefix + 'aligned_rt_orig.csv', expr_dir + output_prefix + 'aligned_area.csv')    
-        A1.write_common_ion_csv(expr_dir + output_prefix + 'area_common_ion.csv', ci_list)
-        A1.write_ion_areas_csv(expr_dir + output_prefix + 'aligned_ions.csv')
+        A1.write_common_ion_csv( os.path.join(exprdir, out_prefix + '_area_common_ion.csv'), ci_list)
+        A1.write_ion_areas_csv( os.path.join(exprdir, out_prefix +  '_aligned_ions.csv') )
     return A1
 
 
@@ -267,96 +409,7 @@ def chunks(l, n):
         yield l[i:i + n]
 
 
-def detect_one_run(run):
-    print("processing GCSM run:", run)
-   # sys.stdout("processing GCSM run:", run)
-    try:
 
-        im, tic = load_run(run)
-
-
-        # noise_level = window_analyzer(tic)
-        # print "Noise level in TIC: ",noise_level
-
-        # would be nice to do noise_mult*noise_level using the noise level AFTER smoothing,
-        # but i can't seem to get the TIC for the smoothed IM.
-        peak_list = call_peaks(im, tic, True, window, scans, n, noise_mult)
-
-        expr = store_as_expr(run, peak_list, True)
-        return expr
-    except:
-        print("run failed: ", run)
-        return None
-
-
-# loop over all runs and store the peaks as 'experiments'
-# within replicates alignment parameters
-def detect_peaks(runs, t):
-    global numthreads
-    numthreads = t
-    expr_list = []
-    if os.path.isdir(expr_dir) == False:
-        os.mkdir(expr_dir)
-
-    from sys import platform as _platform
-    if _platform == "linux" or _platform == "linux2":
-        # linux, so we can set up multiprocessing
-        pool = mp.Pool(processes=numthreads)
-        results = [pool.apply_async(detect_one_run, args=(r,)) for r in runs]
-        expr_list = [p.get() for p in results]
-        try:
-            pool.terminate()
-        except Exception, e:
-            print str(e)
-            sys.exit()
-    elif _platform == "win32" or _platform == "win64":
-        # windows, so just go one at a time....dammit      
-        for run in runs:
-            try:
-                expr = detect_one_run(run)        
-                expr_list.append(expr)
-            except:
-                print "run failed: ", run
-
-    return expr_list
-
-
-# for each grouping of runs
-#   do a multi-align with local alignment params
-
-# do a multi-align of all local alignments with global params
-def detect_and_align(runlist, op, t=1, min_common=1, w=9, s=3, chunked=False, numchunks=1):
-    global output_prefix
-    global window
-    global scans
-
-    output_prefix = op
-    window = w
-    scans = s
-    if chunked == False:
-        expr_list = detect_peaks(runlist, t)
-        multi_align_local(expr_list, Dw, Gw, min_common=min_common, tofile=True)
-    else:
-        alignments = list()
-        chunked_list = chunks(runlist, len(runlist) / numchunks)
-        for chunk in chunked_list:
-            expr_list = detect_peaks(chunk)
-            alignments.append(multi_align_local(expr_list, Dw, Gw, min_common=min_common, tofile=False))
-        multi_align_global(alignments, Db, Gb, min_common=min_common * 4, tofile=True)
-
-
-# align existing expr files containing pre-called peaks
-def align(runlist, chunked=False, min_common=1, numchunks=1):
-    if chunked == False:
-        expr_list = load_expr_list()
-        multi_align_local(expr_list, Dw, Gw, min_common=min_common, tofile=True)
-    else:
-        alignments = list()
-        chunked_list = chunks(runlist, len(runlist) / numchunks)
-        for chunk in chunked_list:
-            expr_list = load_expr_list_from_runlist(chunk)
-            alignments.append(multi_align_local(expr_list, Dw, Gw, min_common=min_common, tofile=False))
-        multi_align_global(alignments, Db, Gb, min_common=min_common, tofile=True)
 
 
 #import osa
