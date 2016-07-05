@@ -173,18 +173,9 @@ def detect_and_align(args, chunked=False, numchunks=1):
         runlist.append(file)
 
     print runlist
-    from sys import platform as _platform
-    if _platform == "linux" or _platform == "linux2":
-        exprlist = detect_peaks_threaded(runlist, args)
-
-    elif _platform == "win32" or _platform == "win64":
-        exprlist = detect_peaks(runlist, args)
+    exprlist = detect_peaks(runlist, args)
 
     multi_align_local(exprlist, args.distance, args.gap, args.mincommon, tofile=True)
-
-
-
-
 
 
 
