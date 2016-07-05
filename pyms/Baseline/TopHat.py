@@ -25,9 +25,9 @@ Top-hat baseline corrector
 import copy
 import numpy
 
-#from scipy import ndimage
+from scipy import ndimage
 
-import stsci.ndimage as ndimage
+#import stsci.ndimage as ndimage
 from pyms.Utils.Error import error
 from pyms.GCMS.Function import is_ionchromatogram, ic_window_points
 
