@@ -21,7 +21,7 @@ manual
 ------
 usage: python easyGC.py [command] [options]
 
-<b>peakcall</b>
+**peakcall**
 
 run the peak caller on a directory of GC-MS files. This will produce a <i>.expr</i> file output for each GC-MS run which is a binary format of called peaks and mass specs. The .expr files are used later by the aligner. 
 ```
@@ -72,9 +72,9 @@ optional arguments:
                         (default: 10)
 ```
 
-<b>align</b>
+**align**
 
-run the peak aligner on a directory of .expr files that were produced by <b>peakcall</b>. This will produce three CSV files as ouput:
+run the peak aligner on a directory of .expr files that were produced by [peakcall]() . This will produce three CSV files as ouput:
 
 - aligned_rt.csv
 - aligned_area.csv
@@ -126,7 +126,7 @@ optional arguments:
                         (default: 10)
 ```
 
-<b>pipeline</b>
+**pipeline**
 
 run the whole shebang on a directory of GC-MS runs, inclduing peak calling through to aligned output.
 ```
