@@ -71,6 +71,72 @@ def detect(args):
     print runlist
     exprlist = detect_peaks(runlist, args)
 
+# loop over all runs and store the peaks as 'experiments'
+# within replicates alignment parameters
+def detect_peaks(runs, args):
+    expr_list = []
+    pl_list = []
+    if os.path.isdir(exprdir) == False:
+        os.mkdir(exprdir)
+
+    from sys import platform as _platform
+    if _platform == "win" or _platform == "win32":
+        for run in runs:
+            try:
+                pl = detect_one_run(run, args)
+                expr = store_as_expr(run, pl, args)
+                expr_list.append(expr)
+            except:
+                print "run failed: ", run
+                traceback.print_exc()
+
+    if _platform == "linux" or _platform == "linux2":
+        pool = mp.Pool(processes=args.threads)
+        results = [pool.apply_async(detect_one_run, args=(r,args,)) for r in runs]
+        pl_list = [p.get() for p in results]
+
+        for pl in pl_list:
+            expr = store_as_expr(run, pl, args)
+            expr_list.append(expr)
+
+        try:
+            pool.terminate()
+        except Exception, e:
+            print str(e)
+            sys.exit()
+
+    return expr_list
+
+
+def detect_one_run(run, args):
+    infile = os.path.join(args.indir, run)
+    print "processing GC-MS file:", infile
+
+   # sys.stdout("processing GCSM run:", run)
+    # load the input GC-MS file
+    try:
+        if args.ftype == 'CDF':
+            from pyms.GCMS.IO.ANDI.Function import ANDI_reader
+            data = ANDI_reader(infile)
+        elif args.ftype == 'JDX':
+            #data = JCAMP_reader(in_file)
+            data = pyms.GCMS.IO.JCAMP.Function.JCAMP_OpenChrom_reader(infile)
+        else:
+            raise ValueError('can only load ANDI (CDF) or JDX files!')
+    except:
+        print "Failure to load input file ", infile
+    else:
+        data.trim(args.trimstart+"m",args.trimend+"m")
+        # get TIC. Would prefer to get from smoothed IM but API is faulty!
+        tic = data.get_tic()
+        # integer mass
+        im = build_intensity_matrix_i(data)
+
+        # would be nice to do noise_mult*noise_level using the noise level AFTER smoothing,
+        # but i can't seem to get the TIC for the smoothed IM.
+        peak_list = call_peaks(im, tic, True, args)
+        return peak_list
+
 
 
 # this is the alignment-only pipeline
@@ -107,81 +173,17 @@ def detect_and_align(args, chunked=False, numchunks=1):
         runlist.append(file)
 
     print runlist
-
-    if chunked == False:
-        exprlist = detect_peaks(runlist, args)
-        multi_align_local(exprlist, args.distance, args.gap, args.mincommon, tofile=True)
-    else:
-        alignments = list()
-        chunked_list = chunks(runlist, len(runlist) / numchunks)
-        for chunk in chunked_list:
-            expr_list = detect_peaks(chunk)
-            alignments.append(multi_align_local(expr_list, Dw, Gw, args.mincommon, tofile=False))
-        multi_align_global(alignments, Db, Gb, args.mincommon * 4, tofile=True)
-
-
-# loop over all runs and store the peaks as 'experiments'
-# within replicates alignment parameters
-def detect_peaks(runs, args):
-
-
-    expr_list = []
-    if os.path.isdir(exprdir) == False:
-        os.mkdir(exprdir)
-
     from sys import platform as _platform
     if _platform == "linux" or _platform == "linux2":
-        # linux, so we can set up multiprocessing
-        pool = mp.Pool(processes=args.threads)
-        results = [pool.apply_async(detect_one_run, args=(r,args,)) for r in runs]
-        expr_list = [p.get() for p in results]
-        try:
-            pool.terminate()
-        except Exception, e:
-            print str(e)
-            sys.exit()
+        exprlist = detect_peaks_threaded(runlist, args)
+
     elif _platform == "win32" or _platform == "win64":
-        # windows, so just go one at a time....dammit
-        for run in runs:
-            try:
-                pl = detect_one_run(run, args)
-                expr = store_as_expr(run, pl, args)
-                expr_list.append(expr)
-            except:
-                print "run failed: ", run
-                traceback.print_exc()
+        exprlist = detect_peaks(runlist, args)
 
-    return expr_list
+    multi_align_local(exprlist, args.distance, args.gap, args.mincommon, tofile=True)
 
-def detect_one_run(run, args):
-    infile = os.path.join(args.indir, run)
-    print "processing GC-MS file:", infile
 
-   # sys.stdout("processing GCSM run:", run)
 
-    # load the input GC-MS file
-    try:
-        if args.ftype == 'CDF':
-            from pyms.GCMS.IO.ANDI.Function import ANDI_reader
-            data = ANDI_reader(infile)
-        elif args.ftype == 'JDX':
-            #data = JCAMP_reader(in_file)
-            data = pyms.GCMS.IO.JCAMP.Function.JCAMP_OpenChrom_reader(infile)
-        else:
-            raise ValueError('can only load ANDI (CDF) or JDX files!')
-    except:
-        print "Failure to load input file ", infile
-    else:
-        data.trim(args.trimstart+"m",args.trimend+"m")
-        # get TIC. Would prefer to get from smoothed IM but API is faulty!
-        tic = data.get_tic()
-        # integer mass
-        im = build_intensity_matrix_i(data)
-
-        # would be nice to do noise_mult*noise_level using the noise level AFTER smoothing,
-        # but i can't seem to get the TIC for the smoothed IM.
-        peak_list = call_peaks(im, tic, True, args)
-        return peak_list
 
 
 
