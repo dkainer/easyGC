@@ -43,11 +43,13 @@ optional arguments:
                         CDF or JDX. This is the type of input GC-MS files you
                         have. CDF is not supported on Windows (default: None)
   -TS TRIMSTART, --trimstart TRIMSTART
-                        trim X.XX minutes from the start of the chromatogram
-                        (default: 0.0)
+                        time in minutes (X.XX) in the chromatogram from where
+                        the analysis should begin. Helps to cut out junk at
+                        the start (default: 0.0)
   -TE TRIMEND, --trimend TRIMEND
-                        trim X.XX minutes from the end of the chromatogram
-                        (default: 0.0)
+                        time in minutes (X.XX) in the chromatogram where the
+                        analysis should end. Helps to cut out junk at the end
+                        (default: 20.0)
   -W WINDOW, --window WINDOW
                         peak calling: width (in scans) of window over which
                         local ion maxima are detected. Should be similar to
@@ -90,42 +92,25 @@ usage: easyGC align -e EXPRDIR [-D DISTANCE] [-G GAP] [-C MINCOMMON] [-T THREADS
 ```
 optional arguments:
   -h, --help            show this help message and exit
-  -i INDIR, --indir INDIR
-                        directory containing your GC-MS files to be processed
-                        (default: None)
-  -f FTYPE, --ftype FTYPE
-                        CDF or JDX. This is the type of input GC-MS files you
-                        have. CDF is not supported on Windows (default: None)
-  -TS TRIMSTART, --trimstart TRIMSTART
-                        trim X.XX minutes from the start of the chromatogram
-                        (default: 0.0)
-  -TE TRIMEND, --trimend TRIMEND
-                        trim X.XX minutes from the end of the chromatogram
-                        (default: 0.0)
-  -W WINDOW, --window WINDOW
-                        peak calling: width (in scans) of window over which
-                        local ion maxima are detected. Should be similar to
-                        the width off your peaks. (default: 9)
-  -S SCANS, --scans SCANS
-                        peak calling: distance (in scans) at which locally
-                        apexing ions can be combined into one peak (default:
-                        3)
-  -N MINIONS, --minions MINIONS
-                        peak calling: min number of apexing ions with
-                        intensity above a threshold required for a peak to be
-                        called. Higher = less peaks called (default: 4)
-  -R MININTENSITY, --minintensity MININTENSITY
-                        peak calling: min intensity (percent) of an ion
-                        relative to max peak intensity for that ion to be
-                        included in the peak (default: 5)
-  -M NOISEMULT, --noisemult NOISEMULT
-                        peak calling: total peak intensity must be at least
-                        this multiple of the base noise level to be called.
-                        Higher multiple means fewer peaks called (default: 4)
-  -I TOPIONS, --topions TOPIONS
-                        from the list of most important ions in a peak, how
-                        many should be outputted as a mini mass-spec?
-                        (default: 10)
+  -e EXPRDIR, --exprdir EXPRDIR
+                        the path to the .expr files from a previous peak
+                        calling run. These will be aligned. (default: None)
+  -D DISTANCE, --distance DISTANCE
+                        local alignment: distance in retention time (seconds)
+                        over which the local peak aligner should search for
+                        similar peaks to this one (default: 2.5)
+  -G GAP, --gap GAP     local alignment: gap penalty. Lower G results in more
+                        peaks in the output. Higher G result in fewer output
+                        peaks but possibly some peaks contain multiple merged
+                        peaks (default: 0.4)
+  -C MINCOMMON, --mincommon MINCOMMON
+                        local alignment: minimum number of samples that an
+                        aligned peak must be called in for it to be outputted
+                        (default: 1)
+  -T THREADS, --threads THREADS
+                        number of threads to use. Currently only multithreaded
+                        on linux! (default: 1)
+
 ```
 
 **pipeline**
