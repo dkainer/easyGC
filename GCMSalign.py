@@ -83,8 +83,8 @@ def detect_peaks(runs, args):
     if _platform == "win" or _platform == "win32":
         for run in runs:
             try:
-                pl = detect_one_run(run, args)
-                expr = store_as_expr(run, pl, args)
+                pl, rid = detect_one_run(run, args)
+                expr = store_as_expr(rid, pl, args)
                 expr_list.append(expr)
             except:
                 print "run failed: ", run
@@ -96,7 +96,7 @@ def detect_peaks(runs, args):
         pl_list = [p.get() for p in results]
 
         for pl in pl_list:
-            expr = store_as_expr(run, pl, args)
+            expr = store_as_expr(pl[1], pl[0], args)
             expr_list.append(expr)
 
         try:
@@ -135,8 +135,7 @@ def detect_one_run(run, args):
         # would be nice to do noise_mult*noise_level using the noise level AFTER smoothing,
         # but i can't seem to get the TIC for the smoothed IM.
         peak_list = call_peaks(im, tic, True, args)
-        return peak_list
-
+        return peak_list, run
 
 
 # this is the alignment-only pipeline

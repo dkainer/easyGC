@@ -57,3 +57,6 @@ elif args.which == 'align':
 elif args.which == 'peakcall':
     print "running peak detector and quantification"
     detect(args)
+
+else:
+    print "invalid command"
