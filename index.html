@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>EasyGC by dkainer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">EasyGC</h1>
+      <h2 class="project-tagline">A high throughput GC-MS analysis pipeline built on the Python PyMS library</h2>
+      <a href="https://github.com/dkainer/easyGC" class="btn">View on GitHub</a>
+      <a href="https://github.com/dkainer/easyGC/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/dkainer/easyGC/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="easygc" class="anchor" href="#easygc" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>EasyGC</h1>
+
+<p>This is a high throughput, command-line GC-MS analysis pipeline. It is built on top of a modified version of the PyMS python library (<a href="http://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-13-115">http://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-13-115</a> ) </p>
+
+<p>This pipeline makes it easy to analyse a large set of GC-MS runs. The input is a directory full of runs (in CDF or JDX format), and the output is a matrix of peaks aligned across all your samples, including their retention times, TIC areas, and mini mass spec per called peak. You can tweak the way peaks are called, filtered and aligned with a whole range of parameters. The key thing, though, is that this pipeline makes it VERY easy to quantitate a lot of peaks across a lot of samples with minimal fuss. It is especially useful for population-level analyses where relative peak size or presence matters most, rather than extremely accurate peak identification and quantitation.</p>
+
+<p><strong>version: 0.0.1</strong>: very early. There are currently bugs in the multithreading on linux.</p>
+
+<h2>
+<a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>prerequisites</h2>
+
+<ul>
+<li>Python 2.7</li>
+<li>matplotlib</li>
+<li>netCDF</li>
+<li>pycdf 0.6-3  (this will only work on Linux)</li>
+<li>scipy.ndimage package</li>
+</ul>
+
+<p>(see PyMS_UserGuide.pdf for dependencies installation instructions). </p>
+
+<p>The PyMS lib in this repository (/pyms) should be used instead of the original PyMS python library, as it has a few extra features and bug fixes.</p>
+
+<h2>
+<a id="manual" class="anchor" href="#manual" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>manual</h2>
+
+<p>usage: python easyGC.py [command] [options]</p>
+
+<p><strong>peakcall</strong></p>
+
+<p>run the peak caller on a directory of GC-MS files. This will produce a <i>.expr</i> file output for each GC-MS run which is a binary format of called peaks and mass specs. The .expr files are used later by the aligner. </p>
+
+<pre><code>usage: easyGC peakcall [-h] -i INDIR -f FTYPE [-TS TRIMSTART] [-TE TRIMEND]
+                       [-W WINDOW] [-S SCANS] [-N MINIONS] [-R MININTENSITY]
+                       [-M NOISEMULT] [-I TOPIONS]
+</code></pre>
+
+<pre><code>optional arguments:
+  -h, --help            show this help message and exit
+  -i INDIR, --indir INDIR
+                        directory containing your GC-MS files to be processed
+                        (default: None)
+  -f FTYPE, --ftype FTYPE
+                        CDF or JDX. This is the type of input GC-MS files you
+                        have. CDF is not supported on Windows (default: None)
+  -TS TRIMSTART, --trimstart TRIMSTART
+                        time in minutes (X.XX) in the chromatogram from where
+                        the analysis should begin. Helps to cut out junk at
+                        the start (default: 0.0)
+  -TE TRIMEND, --trimend TRIMEND
+                        time in minutes (X.XX) in the chromatogram where the
+                        analysis should end. Helps to cut out junk at the end
+                        (default: 20.0)
+  -W WINDOW, --window WINDOW
+                        peak calling: width (in scans) of window over which
+                        local ion maxima are detected. Should be similar to
+                        the width off your peaks. (default: 9)
+  -S SCANS, --scans SCANS
+                        peak calling: distance (in scans) at which locally
+                        apexing ions can be combined into one peak (default:
+                        3)
+  -N MINIONS, --minions MINIONS
+                        peak calling: min number of apexing ions with
+                        intensity above a threshold required for a peak to be
+                        called. Higher = less peaks called (default: 4)
+  -R MININTENSITY, --minintensity MININTENSITY
+                        peak calling: min intensity (percent) of an ion
+                        relative to max peak intensity for that ion to be
+                        included in the peak (default: 5)
+  -M NOISEMULT, --noisemult NOISEMULT
+                        peak calling: total peak intensity must be at least
+                        this multiple of the base noise level to be called.
+                        Higher multiple means fewer peaks called (default: 4)
+  -I TOPIONS, --topions TOPIONS
+                        from the list of most important ions in a peak, how
+                        many should be outputted as a mini mass-spec?
+                        (default: 10)
+</code></pre>
+
+<p><strong>align</strong></p>
+
+<p>run the peak aligner on a directory of .expr files that were produced by <a href="">peakcall</a> . This will produce three CSV files as ouput:</p>
+
+<ul>
+<li>aligned_rt.csv</li>
+<li>aligned_area.csv</li>
+<li>aligned_ions.csv</li>
+</ul>
+
+<p>This command is especially useful if you are not happy with the aligned output from 'pipeline' and want to tweak the alignment parameters to see how they affaect your output matrix, without having to call peaks all over again. </p>
+
+<pre><code>usage: easyGC align -e EXPRDIR [-D DISTANCE] [-G GAP] [-C MINCOMMON] [-T THREADS]
+</code></pre>
+
+<pre><code>optional arguments:
+  -h, --help            show this help message and exit
+  -e EXPRDIR, --exprdir EXPRDIR
+                        the path to the .expr files from a previous peak
+                        calling run. These will be aligned. (default: None)
+  -D DISTANCE, --distance DISTANCE
+                        local alignment: distance in retention time (seconds)
+                        over which the local peak aligner should search for
+                        similar peaks to this one (default: 2.5)
+  -G GAP, --gap GAP     local alignment: gap penalty. Lower G results in more
+                        peaks in the output. Higher G result in fewer output
+                        peaks but possibly some peaks contain multiple merged
+                        peaks (default: 0.4)
+  -C MINCOMMON, --mincommon MINCOMMON
+                        local alignment: minimum number of samples that an
+                        aligned peak must be called in for it to be outputted
+                        (default: 1)
+  -T THREADS, --threads THREADS
+                        number of threads to use. Currently only multithreaded
+                        on linux! (default: 1)
+
+</code></pre>
+
+<p><strong>pipeline</strong></p>
+
+<p>run the whole shebang on a directory of GC-MS runs, inclduing peak calling through to aligned output.</p>
+
+<pre><code>usage: easyGC pipeline [-h] -i INDIR -f FTYPE [-TS TRIMSTART] [-TE TRIMEND]
+                       [-W WINDOW] [-S SCANS] [-N MINIONS] [-R MININTENSITY]
+                       [-M NOISEMULT] [-I TOPIONS] [-D DISTANCE] [-G GAP]
+                       [-C MINCOMMON] [-T THREADS]
+</code></pre>
+
+<h2>
+<a id="to-do" class="anchor" href="#to-do" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>TO DO</h2>
+
+<ul>
+<li>include dependencies in repository</li>
+<li>produce excel file output with error checking results shown by cell colour.</li>
+</ul>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/dkainer/easyGC">EasyGC</a> is maintained by <a href="https://github.com/dkainer">dkainer</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
