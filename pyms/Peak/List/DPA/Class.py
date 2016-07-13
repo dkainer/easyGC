@@ -121,7 +121,7 @@ class Alignment(object):
     def write_csv_dk(self, rt_file_name, area_file_name, minutes=True):
 
         """
-        @summary: Writes the alignment to CSV files
+        @summary: Writes the alignment to CSV files, but excluded outliers from the calculation of composite peak
 
         This function writes two files: one containing the alignment of peak
         retention times and the other containing the alignment of peak areas.
@@ -134,9 +134,7 @@ class Alignment(object):
             in minutes. If False, retention time will be saved in seconds
         @type minutes: BooleanType
 
-        @author: Woon Wai Keen
-        @author: Andrew Isaac
-        @author: Vladimir Likic
+        @author: David Kainer
         """
 
         try:
@@ -157,14 +155,13 @@ class Alignment(object):
         fp2.write(header)
 
         # for each alignment position write alignment's peak and area
-        for peak_idx in range(len(self.peakpos[0])):
+        for peak_idx in range(len(self.peakpos[0])):    # loop through peak lists (rows)
 
             rts = []
             areas = []
             new_peak_list = []
 
-            for align_idx in range(len(self.peakpos)):
-
+            for align_idx in range(len(self.peakpos)):   # loops through samples (columns)
                 peak = self.peakpos[align_idx][peak_idx]
 
                 if peak is not None:
@@ -178,65 +175,33 @@ class Alignment(object):
                     areas.append(peak.get_area())
                     new_peak_list.append(peak)
 
-                    #avgrt = avgrt + rt
-                    #countrt = countrt + 1
                 else:
                     rts.append(numpy.nan)
                     areas.append(None)
-            
-            # detect outliers in this position
-            print rts[:]
-            rts_np = numpy.array(rts)
 
-            # but only do the detection if there are at least 3 non-nan entries at this RT !!
-            if numpy.count_nonzero(~numpy.isnan(rts)) > 2:
-                is_outlier = median_outliers(rts)
-                outliers = rts_np[is_outlier]
-
-                # the average RT is now calculated after excluding outliers. This should improve
-                # the ability to order peaks and figure out badly aligned entries
-                avgrt = numpy.nanmean(rts_np[~is_outlier])
-                print "outliers at RT "+str(avgrt)+":: "+str(outliers)
-
-
-
-            else:
-                avgrt = numpy.nanmean(rts)
-
-            # TO DO: exlcude outliers from compo-peak calculation
             compo_peak = composite_peak(new_peak_list, minutes)
             peak_UID = compo_peak.get_UID()
             peak_UID_string = ( '"%s"' % peak_UID)
 
             # write to retention times file
             fp1.write(peak_UID_string)
-            fp1.write(",%.3f" % avgrt)
-            
-# DK edited version. Flag possible poor alignment entries             
+            fp1.write(",%.3f" % float(compo_peak.get_rt()/60))
+
             for rt in rts:
                 if numpy.isnan(rt):
                     fp1.write(",NA")
                 else:
-                   # if abs(rt - avgrt) > 0.04:
-                   #     fp1.write(",%.3f %c" % (rt, "!"))
-                   # else:
                     fp1.write(",%.3f" % rt)
             fp1.write("\n")
-#            for rt in rts:
-#                if rt == None:
-#                    fp1.write(",NA")
-#                else:
-#                    fp1.write(",%.3f" % rt)
-#            fp1.write("\n")
 
             # write to peak areas file
             fp2.write(peak_UID_string)
-            fp2.write(",%.3f" % avgrt)
+            fp2.write(",%.0f" % float(compo_peak.get_rt()/60))
             for area in areas:
                 if area == None:
                     fp2.write(",NA")
                 else:
-                    fp2.write(",%.4f" % area)
+                    fp2.write(",%.0f" % area)
             fp2.write("\n")
 
         fp1.close()
@@ -722,6 +687,7 @@ class PairwiseAlignment(object):
 
         sim_matrix = numpy.zeros((n,n), dtype='f')
 
+        #DK: Could we parallelize this pairwise alignment loop??
         for i in range(n - 1):
             for j in range(i + 1, n):
                 ma = Function.align(algts[i], algts[j], D, gap)

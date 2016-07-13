@@ -307,6 +307,8 @@ def position_similarity(pos1, pos2, D):
     @author: Andrew Isaac
     """
 
+
+
     score = 0.0
     count = 0
 
@@ -314,7 +316,6 @@ def position_similarity(pos1, pos2, D):
     ## set tollerance to 1/1000
     _TOL = 0.001
     cutoff = D*math.sqrt(-2.0*math.log(_TOL))
-
     for a in pos1:
         if a is not None:
             aspec = a.mass_spec

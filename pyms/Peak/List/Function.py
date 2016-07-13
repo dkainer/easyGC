@@ -36,11 +36,12 @@ try:
 except:
     pass
 
+# DK: I edited this function to avoid using outliers in the calculation
 def composite_peak(peak_list, minutes=False):
 
     """
     @summary: Create a peak that consists of a composite spectrum from all
-        spectra in the list of peaks.
+        spectra in the list of peaks
 
     @param peak_list: A list of peak objects
     @type peak_list: ListType
@@ -51,14 +52,34 @@ def composite_peak(peak_list, minutes=False):
     @type: pyms.Peak.Class.Peak
 
     @author: Andrew Isaac
+    @author: David Kainer
     """
 
     first = True
     count = 0
     avg_rt = 0
     new_ms = None
+
+    # DK: first mark peaks in the list that are outliers by RT
+    rts = []
+    if len(peak_list) > 2:
+        for peak in peak_list:
+            rts.append( peak.get_rt() )
+
+        print rts
+        is_outlier = median_outliers(rts)
+        print is_outlier
+
+        for i, val in enumerate(is_outlier):
+            if val:
+                peak_list[i].isoutlier = True
+
+
+    # DK: the average RT and average mass spec for the compo peak is now calculated from peaks that are NOT outliers.
+    # This should improve the ability to order peaks and figure out badly aligned entries
+
     for peak in peak_list:
-        if peak is not None:
+        if peak is not None and peak.check_outlier() == False:
             ms = peak.get_mass_spectrum()
             spec = numpy.array(ms.mass_spec, dtype='d')
             if first:
@@ -76,8 +97,8 @@ def composite_peak(peak_list, minutes=False):
             count += 1
     if count > 0:
         avg_rt = avg_rt/count
-        #if minutes == True:
-            #avg_rt = avg_rt/60.0
+        if minutes == True:
+            avg_rt = avg_rt/60.0
         avg_spec = avg_spec/count
         avg_spec = avg_spec.tolist()  # list more compact than ndarray
         new_ms = MassSpectrum(mass_list, avg_spec)

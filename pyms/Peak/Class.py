@@ -43,7 +43,8 @@ class Peak:
     @author: Andrew Isaac
     """
 
-    def __init__(self, rt=0.0, ms=None, minutes=False):
+    # DK: added the is_outlier flag
+    def __init__(self, rt=0.0, ms=None, minutes=False, outlier=False):
 
         """
         @param rt: Retention time
@@ -67,7 +68,7 @@ class Peak:
             rt = rt*60.0
 
         self.__minutes = minutes
-
+        self.isoutlier = outlier     # DK
         # basic peak attributes
         self.__rt = float(rt)
         # these two attributes are required for
@@ -126,12 +127,12 @@ class Peak:
                     best2_ii = best_ii
                     best_ii = ii
             ratio = int(100*mass_spec[best2_ii]/best)
-            UID = "%d-%d-%d-%.2f" % (int(mass_list[best_ii]),
+            UID = "%d-%d-%d-%.3f" % (int(mass_list[best_ii]),
                     int(mass_list[best2_ii]), ratio, self.__rt/minutes)
         elif self.__ic_mass != None:
-            UID = "%d-%.2f" % (int(self.__ic_mass), self.__rt/minutes)
+            UID = "%d-%.3f" % (int(self.__ic_mass), self.__rt/minutes)
         else:
-            UID =  "%.2f" % self.__rt/minutes
+            UID =  "%.3f" % self.__rt/minutes
 
         self.__UID = UID
 
@@ -535,3 +536,7 @@ class Peak:
 
         # TEST: to test if this speeds things up
         self.mass_spec = self.__mass_spectrum.mass_spec
+
+    # DK
+    def check_outlier(self):
+        return self.isoutlier

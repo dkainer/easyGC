@@ -14,7 +14,7 @@ peak_parser.add_argument('-W', '--window', required=False, default=9, help='peak
 peak_parser.add_argument('-S', '--scans', required=False, default=3, help='peak calling: distance (in scans) at which locally apexing ions can be combined into one peak', type=int)
 peak_parser.add_argument('-N', '--minions', required=False, default=4, help='peak calling: min number of apexing ions with intensity above a threshold required for a peak to be called. Higher = less peaks called', type=int)
 peak_parser.add_argument('-R', '--minintensity', required=False, default=5, help='peak calling: min intensity (percent) of an ion relative to max peak intensity for that ion to be included in the peak', type=int)
-peak_parser.add_argument('-M', '--noisemult', required=False, default=4, help='peak calling: total peak intensity must be at least this multiple of the base noise level to be called. Higher multiple means fewer peaks called', type=int)
+peak_parser.add_argument('-M', '--noisemult', required=False, default=4, help='peak calling: total peak intensity must be at least this multiple of the base noise level to be called. Higher multiple means fewer peaks called', type=float)
 peak_parser.add_argument('-I', '--topions', required=False, default=10, help='from the list of most important ions in a peak, how many should be outputted as a mini mass-spec?', type=int)
 peak_parser.add_argument('-T', '--threads', required=False, default=1, help='Peak calling is linearly sped up by using more threads. Currently only multithreaded on linux!', type=int)
 
@@ -24,7 +24,6 @@ align_parser.add_argument('-e', '--exprdir', required=True, help='[REQUIRED] the
 align_parser.add_argument('-D', '--distance', required=False, default=2.5, help='local alignment: distance in retention time (seconds) over which the local peak aligner should search for similar peaks to this one', type=float)
 align_parser.add_argument('-G', '--gap', required=False, default=0.40, help='local alignment: gap penalty. Lower G results in more peaks in the output. Higher G result in fewer output peaks but possibly some peaks contain multiple merged peaks', type=float)
 align_parser.add_argument('-C', '--mincommon', required=False, default=1, help='local alignment: minimum number of samples that an aligned peak must be called in for it to be outputted', type=int)
-align_parser.add_argument('-T', '--threads', required=False, default=1, help='number of threads to use. Currently only multithreaded on linux!', type=int)
 
 pipe_parser = subparsers.add_parser('pipeline', help='pipeline help', description="run the whole pipeline, including peak calling and peak aligner", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 pipe_parser.set_defaults(which='pipeline')
