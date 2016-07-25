@@ -23,6 +23,14 @@ manual
 ------
 usage: python easyGC.py [command] [options]
 
+The general way to use easyGC is to do a two stage analysis:
+
+1. Call peaks and their areas in each sample using 'easyGC peakcall'
+2. Align all peaks across samples using 'easyGC align'
+
+If you are unhappy with the alignment you simply re-run the align command with tweaked params.
+
+
 **peakcall**
 
 run the peak caller on a directory of GC-MS files. This will produce a <i>.expr</i> file output for each GC-MS run which is a binary format of called peaks and mass specs. The .expr files are used later by the aligner. 
@@ -78,13 +86,11 @@ optional arguments:
 
 **align**
 
-run the peak aligner on a directory of .expr files that were produced by [peakcall]() . This will produce three CSV files as ouput:
+run the peak aligner on a directory of .expr files that were produced by [peakcall]() . This will produce one Excel 2010 (.xlsx) two CSV files as ouput:
 
-- aligned_rt.csv
+- aligned_rt.xlsx
 - aligned_area.csv
-- aligned_ions.csv
-
-This command is especially useful if you are not happy with the aligned output from 'pipeline' and want to tweak the alignment parameters to see how they affaect your output matrix, without having to call peaks all over again. 
+- aligned_rt.csv
 
 ```
 usage: easyGC align -e EXPRDIR [-D DISTANCE] [-G GAP] [-C MINCOMMON] [-T THREADS]
@@ -115,6 +121,7 @@ optional arguments:
 
 **pipeline**
 
+<b>NOT CURRENTLY WORKING!</b>
 run the whole shebang on a directory of GC-MS runs, inclduing peak calling through to aligned output.
 ```
 usage: easyGC pipeline [-h] -i INDIR -f FTYPE [-TS TRIMSTART] [-TE TRIMEND]
@@ -127,4 +134,9 @@ usage: easyGC pipeline [-h] -i INDIR -f FTYPE [-TS TRIMSTART] [-TE TRIMEND]
 TO DO
 -----
 - include dependencies in repository
-- produce excel file output with error checking results shown by cell colour.
+- provide ability to list certain masses that should be nulled (i.e. ignored) as they are known contaminants
+- Improve composite peak mass spec to be a more accurate representation of the mean peak.
+
+recently implements
+-------------------
+- produce excel file output with error checking results shown by cell colour (done)
