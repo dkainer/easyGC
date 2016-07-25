@@ -312,10 +312,10 @@ def multi_align_local(exprlist, Dw, Gw, min_common=1, tofile=False):
 
     if tofile == True:
         ci_list = A1.common_ion()
-        A1.write_csv_dk( os.path.join(exprdir, out_prefix + '_aligned_rt.csv'), os.path.join(exprdir, out_prefix + '_aligned_area.csv') )
-        #A1.write_csv(expr_dir + output_prefix + 'aligned_rt_orig.csv', expr_dir + output_prefix + 'aligned_area.csv')    
-        A1.write_common_ion_csv( os.path.join(exprdir, out_prefix + '_area_common_ion.csv'), ci_list)
-        A1.write_ion_areas_csv( os.path.join(exprdir, out_prefix +  '_aligned_ions.csv') )
+        A1.write_excel(os.path.join(exprdir, out_prefix + "_aligned_rt.xlsx"))
+        #A1.write_csv_dk( os.path.join(exprdir, out_prefix + '_aligned_rt.csv'), os.path.join(exprdir, out_prefix + '_aligned_area.csv') )
+        #A1.write_common_ion_csv( os.path.join(exprdir, out_prefix + '_area_common_ion.csv'), ci_list)
+        #A1.write_ion_areas_csv( os.path.join(exprdir, out_prefix +  '_aligned_ions.csv') )
     return A1
 
 

@@ -38,6 +38,10 @@ import Function
 import math
 import operator
 from pyms.Peak.List.Function import percentile_based_outlier, mad_based_outlier, median_outliers
+from openpyxl import Workbook
+from openpyxl.comments import Comment
+from openpyxl.formatting.rule import ColorScaleRule, CellIsRule, FormulaRule
+from openpyxl import utils
 
 # If psyco is installed, use it to speed up running time
 try:
@@ -206,6 +210,93 @@ class Alignment(object):
 
         fp1.close()
         fp2.close()
+
+
+    def write_excel(self, excel_file_name, minutes=True):
+        """
+        @summary: Writes the alignment to an excel file, with colouring showing possible mis-alignments
+
+        @param excel_file_name: The name for the retention time alignment file
+        @type excel_file_name: StringType
+        @param minutes: An optional indicator whether to save retention times
+            in minutes. If False, retention time will be saved in seconds
+        @type minutes: BooleanType
+
+        @author: David Kainer
+        """
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Aligned RT"
+
+        # create header row
+        ws['A1'] = "UID"
+        ws['B1'] = "RTavg"
+        for i,item in enumerate(self.expr_code):
+            currcell = ws.cell( row = 1, column = i+3, value= "%s" % item )
+            comment = Comment('yay '+str(i), 'dave')
+            currcell.comment = comment
+
+        # for each alignment position write alignment's peak and area
+        for peak_idx in range(len(self.peakpos[0])):    # loop through peak lists (rows)
+
+            new_peak_list = []
+
+            for align_idx in range(len(self.peakpos)):   # loops through samples (columns)
+                peak = self.peakpos[align_idx][peak_idx]
+
+                if peak is not None:
+
+                    if minutes:
+                        rt = peak.get_rt()/60.0
+                    else:
+                        rt = peak.get_rt()
+
+                    area = peak.get_area()
+                    new_peak_list.append(peak)
+
+                    # write the RT into the cell in the excel file
+                    currcell = ws.cell( row = 2+peak_idx, column = 3+align_idx, value=round(rt, 3) )
+
+                    # get the mini-mass spec for this peak, and divide the ion intensities by 1000 to shorten them
+                    ia = peak.get_ion_areas()
+                    ia.update( (mass, int(intensity/1000)) for mass, intensity in ia.items() )
+                    sorted_ia = sorted(ia.iteritems(), key=operator.itemgetter(1), reverse=True)
+
+                    # write the peak area and mass spec into the comment for the cell
+                    comment = Comment("Area: %.0f | MassSpec: %s" % (area,sorted_ia), 'dave')
+                    currcell.number_format
+                    currcell.comment = comment
+
+                else:
+                    rt = 'NA'
+                    area = 'NA'
+                    currcell = ws.cell( row = 2+peak_idx, column = 3+align_idx, value='NA' )
+                    comment = Comment("Area: NA", 'dave')
+                    currcell.number_format
+                    currcell.comment = comment
+
+            compo_peak      = composite_peak(new_peak_list, minutes)
+            peak_UID        = compo_peak.get_UID()
+            peak_UID_string = ( '"%s"' % peak_UID)
+
+            currcell = ws.cell( row = 2+peak_idx, column = 1, value = peak_UID_string )
+            currcell = ws.cell( row = 2+peak_idx, column = 2, value = "%.3f" % float(compo_peak.get_rt()/60) )
+
+        # colour the cells in each row based on their RT percentile for that row
+        i = 0
+        for row in ws.rows:
+            i += 1
+            cell_range = ("{0}"+str(i)+":{1}"+str(i)).format(utils.get_column_letter(3), utils.get_column_letter(len(row)))
+            ws.conditional_formatting.add(cell_range, ColorScaleRule(start_type='percentile', start_value=5, start_color='CC99FF',
+                                                               mid_type='percentile', mid_value=50, mid_color='FFFFCC',
+                                                               end_type='percentile', end_value=95, end_color='FFB266'))
+        wb.save(excel_file_name)
+
+
+
+
+
+
 
     def write_csv(self, rt_file_name, area_file_name, minutes=True):
 
