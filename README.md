@@ -5,15 +5,16 @@ This is a high throughput, command-line GC-MS analysis pipeline. It is built on 
 
 This pipeline makes it easy to analyse a large set of GC-MS runs. The input is a directory full of runs (in CDF or JDX format), and the output is a matrix of peaks aligned across all your samples, including their retention times, TIC areas, and mini mass spec per called peak. You can tweak the way peaks are called, filtered and aligned with a whole range of parameters. The key thing, though, is that this pipeline makes it VERY easy to quantitate a lot of peaks across a lot of samples with minimal fuss. It is especially useful for population-level analyses where relative peak size or presence matters most, rather than extremely accurate peak identification and quantitation.
 
-**version: 0.0.1**: very early. There are currently bugs in the multithreading on linux.
+**version: 0.0.2**:
 
 prerequisites
 -------------
 - Python 2.7
-- matplotlib
+- matplotlib python package
 - netCDF
-- pycdf 0.6-3  (this will only work on Linux)
-- scipy.ndimage package
+- pycdf 0.6-3 python package (this will only work on Linux)
+- scipy.ndimage python package
+- openpyxl python package
  
 (see PyMS_UserGuide.pdf for dependencies installation instructions). 
 
