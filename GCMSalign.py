@@ -189,7 +189,7 @@ def call_peaks(im, tic, smooth, args):
     print "calling peaks"
     if smooth:
         print "Smoothing IM first..."
-        im.crop_mass(53, 198)
+        im.crop_mass(args.lowmass, args.highmass)
         print "cropped masses..."
         # get the size of the intensity matrix
         n_scan, n_mz = im.get_size()

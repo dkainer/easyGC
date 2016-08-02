@@ -93,7 +93,7 @@ run the peak aligner on a directory of .expr files that were produced by [peakca
 - aligned_rt.csv
 
 ```
-usage: easyGC align -e EXPRDIR [-D DISTANCE] [-G GAP] [-C MINCOMMON] [-T THREADS]
+usage: easyGC align -e EXPRDIR [-D DISTANCE] [-G GAP] [-C MINCOMMON]
 ```
 ```
 optional arguments:
@@ -113,30 +113,18 @@ optional arguments:
                         local alignment: minimum number of samples that an
                         aligned peak must be called in for it to be outputted
                         (default: 1)
-  -T THREADS, --threads THREADS
-                        number of threads to use. Currently only multithreaded
-                        on linux! (default: 1)
 
-```
-
-**pipeline**
-
-<b>NOT CURRENTLY WORKING!</b>
-run the whole shebang on a directory of GC-MS runs, inclduing peak calling through to aligned output.
-```
-usage: easyGC pipeline [-h] -i INDIR -f FTYPE [-TS TRIMSTART] [-TE TRIMEND]
-                       [-W WINDOW] [-S SCANS] [-N MINIONS] [-R MININTENSITY]
-                       [-M NOISEMULT] [-I TOPIONS] [-D DISTANCE] [-G GAP]
-                       [-C MINCOMMON] [-T THREADS]
 ```
 
 
 TO DO
 -----
-- include dependencies in repository
+- include dependencies in repository plus setup.py script
 - provide ability to list certain masses that should be nulled (i.e. ignored) as they are known contaminants
 - Improve composite peak mass spec to be a more accurate representation of the mean peak.
+- R script to produce a quick analytics report (e.g. PCA of areas, peak area distributions)
 
 recently implements
 -------------------
-- produce excel file output with error checking results shown by cell colour (done)
+(08/2016) parameters in peakcall for selecting min and max mass range
+(07/2016) produce excel file output with error checking results shown by cell colour (done)
