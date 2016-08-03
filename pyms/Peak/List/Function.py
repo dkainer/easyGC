@@ -60,9 +60,9 @@ def composite_peak(peak_list, minutes=False):
     avg_rt = 0
     new_ms = None
 
-    # DK: first mark peaks in the list that are outliers by RT
+    # DK: first mark peaks in the list that are outliers by RT, but only if there are more than 3 peaks in the list
     rts = []
-    if len(peak_list) > 2:
+    if len(peak_list) > 3:
         for peak in peak_list:
             rts.append( peak.get_rt() )
 

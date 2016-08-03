@@ -200,7 +200,7 @@ class Alignment(object):
 
             # write to peak areas file
             fp2.write(peak_UID_string)
-            fp2.write(",%.0f" % float(compo_peak.get_rt()/60))
+            fp2.write(",%.3f" % float(compo_peak.get_rt()/60))
             for area in areas:
                 if area == None:
                     fp2.write(",NA")
@@ -233,7 +233,7 @@ class Alignment(object):
         ws['B1'] = "RTavg"
         for i,item in enumerate(self.expr_code):
             currcell = ws.cell( row = 1, column = i+3, value= "%s" % item )
-            comment = Comment('yay '+str(i), 'dave')
+            comment = Comment('sample '+str(i), 'dave')
             currcell.comment = comment
 
         # for each alignment position write alignment's peak and area
@@ -287,9 +287,9 @@ class Alignment(object):
         for row in ws.rows:
             i += 1
             cell_range = ("{0}"+str(i)+":{1}"+str(i)).format(utils.get_column_letter(3), utils.get_column_letter(len(row)))
-            ws.conditional_formatting.add(cell_range, ColorScaleRule(start_type='percentile', start_value=5, start_color='CC99FF',
-                                                               mid_type='percentile', mid_value=50, mid_color='FFFFCC',
-                                                               end_type='percentile', end_value=95, end_color='FFB266'))
+            ws.conditional_formatting.add(cell_range, ColorScaleRule(start_type='percentile', start_value=1, start_color='E5FFCC',
+                                                               mid_type='percentile', mid_value=50, mid_color='FFFFFF',
+                                                               end_type='percentile', end_value=99, end_color='FFE5CC'))
         wb.save(excel_file_name)
 
 
