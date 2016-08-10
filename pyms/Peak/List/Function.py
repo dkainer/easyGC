@@ -36,7 +36,7 @@ try:
 except:
     pass
 
-# DK: I edited this function to avoid using outliers in the calculation
+# DK: I edited this function to avoid using RT outliers in the calculation
 def composite_peak(peak_list, minutes=False):
 
     """
@@ -66,9 +66,7 @@ def composite_peak(peak_list, minutes=False):
         for peak in peak_list:
             rts.append( peak.get_rt() )
 
-        print rts
         is_outlier = median_outliers(rts)
-        print is_outlier
 
         for i, val in enumerate(is_outlier):
             if val:

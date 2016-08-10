@@ -41,7 +41,9 @@ from pyms.Peak.List.Function import percentile_based_outlier, mad_based_outlier,
 from openpyxl import Workbook
 from openpyxl.comments import Comment
 from openpyxl.formatting.rule import ColorScaleRule, CellIsRule, FormulaRule
-from openpyxl import utils
+from openpyxl.utils import *
+
+from openpyxl.styles import PatternFill
 
 # If psyco is installed, use it to speed up running time
 try:
@@ -119,7 +121,6 @@ class Alignment(object):
 
         self.peakalgt = filtered_list
         self.peakpos = numpy.transpose(self.peakalgt)
-
 
 
     def write_csv_dk(self, rt_file_name, area_file_name, minutes=True):
@@ -210,6 +211,91 @@ class Alignment(object):
 
         fp1.close()
         fp2.close()
+
+    def write_transposed_output(self, excel_file_name, minutes=True):
+        wb = Workbook()
+        ws1 = wb.create_sheet(title='Aligned RT')
+        ws2 = wb.create_sheet(title='Aligned Area')
+
+        ws1['A1'] = "Peak"
+        ws1['A2'] = "RTavg"
+
+        ws2['A1'] = "Peak"
+        ws2['A2'] = "RTavg"
+
+        style_outlier = PatternFill(fill_type="solid", fgColor="FFAE19", bgColor="FFAE19")
+
+
+        # write column with sample IDs
+        for i,item in enumerate(self.expr_code):
+            currcell = ws1.cell( column = 1, row = i+3, value= "%s" % item )
+            currcell = ws2.cell( column = 1, row = i+3, value= "%s" % item )
+
+        # for each alignment position write alignment's peak and area
+        for peak_idx in range(len(self.peakpos[0])):    # loop through peak lists
+
+            new_peak_list = []  # this will contain a list of tuples of form (peak, col, row), but only non-NA peaks
+            cell_col, cell_row = 0,0
+
+            for align_idx in range(len(self.peakpos)):   # loops through samples
+                peak = self.peakpos[align_idx][peak_idx]
+                cell_col = 2+peak_idx
+                cell_row = 3+align_idx
+
+                if peak is not None:
+
+                    if minutes:
+                        rt = peak.get_rt()/60.0
+                    else:
+                        rt = peak.get_rt()
+
+                    area = peak.get_area()
+
+                    #these are the col,row coords of the peak in the output matrix
+                    new_peak_list.append((peak,cell_col,cell_row))
+
+                    # write the RT into the cell in the excel file
+                    currcell1 = ws1.cell( column = cell_col, row = cell_row, value=round(rt, 3) )
+                    currcell2 = ws2.cell( column = cell_col, row = cell_row, value=round(area, 3) )
+
+                    # get the mini-mass spec for this peak, and divide the ion intensities by 1000 to shorten them
+                    ia = peak.get_ion_areas()
+                    ia.update( (mass, int(intensity/1000)) for mass, intensity in ia.items() )
+                    sorted_ia = sorted(ia.iteritems(), key=operator.itemgetter(1), reverse=True)
+
+                    # write the peak area and mass spec into the comment for the cell
+                    comment = Comment("Area: %.0f | MassSpec: %s" % (area,sorted_ia), 'dave')
+                    currcell1.comment = comment
+
+
+                else:
+                    rt = 'NA'
+                    area = 'NA'
+                    currcell1 = ws1.cell( column = cell_col, row = cell_row, value='NA' )
+                    currcell2 = ws2.cell( column = cell_col, row = cell_row, value='NA' )
+                    comment = Comment("Area: NA", 'dave')
+                    currcell1.comment = comment
+
+
+            compo_peak      = composite_peak( list(p[0] for p in new_peak_list), minutes)   # this method will create the compo peak, aqnd also mark outlier peaks with a bool isoutlier
+            peak_UID        = compo_peak.get_UID()
+            peak_UID_string = ( '"%s"' % peak_UID)
+
+            currcell = ws1.cell( column = 2+peak_idx, row = 1, value = peak_UID_string )
+            currcell = ws1.cell( column = 2+peak_idx, row = 2, value = "%.3f" % float(compo_peak.get_rt()/60) )
+            currcell = ws2.cell( column = 2+peak_idx, row = 1, value = peak_UID_string )
+            currcell = ws2.cell( column = 2+peak_idx, row = 2, value = "%.3f" % float(compo_peak.get_rt()/60) )
+
+            # highlight outlier cells in the current peak list
+            for p in new_peak_list:
+                if p[0].isoutlier:
+                    #ws[ get_column_letter(p[1]) + str(p[2]) ].style = style_outlier
+                    ws1.cell(column = p[1], row = p[2]).fill = style_outlier
+                    ws2.cell(column = p[1], row = p[2]).fill = style_outlier
+
+
+        wb.save(excel_file_name)
+
 
 
     def write_excel(self, excel_file_name, minutes=True):

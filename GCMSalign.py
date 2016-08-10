@@ -145,7 +145,7 @@ def align(args):
     print exprdir
 
     exprlist = load_expr_list()
-    multi_align_local(exprlist, args.distance, args.gap, args.mincommon, tofile=True)
+    multi_align_local(exprlist, args.distance, args.gap, args.mincommon, tofile=True, transposed=args.transposed)
 
 
 
@@ -201,14 +201,14 @@ def call_peaks(im, tic, smooth, args):
             # ic1 = savitzky_golay(ic)
             ic_smooth = savitzky_golay(ic, window=args.window, degree=3)
             #print "savitky golay ran "
-            ic_base = tophat(ic_smooth, struct="1.0m")
+            ic_base = tophat(ic_smooth, struct="1.5m")
             #print "tophat ran "
             im.set_ic_at_index(ii, ic_base)
             #print "smoothed mass ", ii
         print "smoothed IM..."
         # noise level calc
         tic1 = savitzky_golay(tic)
-        tic2 = tophat(tic1, struct="1.0m")
+        tic2 = tophat(tic1, struct="1.5m")
         noise_level = window_analyzer(tic2)
         print "Noise level in TIC: ", noise_level
 
@@ -226,9 +226,9 @@ def call_peaks(im, tic, smooth, args):
     print "Peaks remaining after filtering:", len(pl3)
 
     for peak in pl3:
-        peak.null_mass(73)
+        # peak.null_mass(73)
         # peak.null_mass(207)
-        peak.null_mass(84)
+        # peak.null_mass(84)
 
         area = peak_sum_area(im, peak)  # get the TIC area for this peak
         peak.set_area(area)
@@ -300,19 +300,23 @@ def load_run(infile):
         # return build_intensity_matrix(data), tic
 
 # takes a list of Experiment objects and does a pairwise alignment. Optionally writes RTs, Areas and Ions to file.
-def multi_align_local(exprlist, Dw, Gw, min_common=1, tofile=False):
+def multi_align_local(exprlist, Dw, Gw, min_common=1, tofile=True, transposed=True):
     global exprdir
     global outdir
     out_prefix = (datetime.datetime.now()).strftime("%Y-%m-%d-%H%M")
 
-    print "locally aligning peaks from expr: ", exprlist
+    print "locally aligning peaks from ", exprdir
     F1 = exprl2alignment(exprlist)
     T1 = PairwiseAlignment(F1, Dw, Gw)
     A1 = align_with_tree(T1, min_peaks=min_common)
 
     if tofile == True:
         ci_list = A1.common_ion()
-        A1.write_excel(os.path.join(exprdir, out_prefix + "_aligned_rt.xlsx"))
+        if transposed == True:
+            A1.write_transposed_output(os.path.join(exprdir, out_prefix + "_aligned_rt.xlsx"))
+        else:
+            A1.write_excel(os.path.join(exprdir, out_prefix + "_aligned_rt.xlsx"))
+
         A1.write_csv_dk( os.path.join(exprdir, out_prefix + '_aligned_rt.csv'), os.path.join(exprdir, out_prefix + '_aligned_area.csv') )
         #A1.write_common_ion_csv( os.path.join(exprdir, out_prefix + '_area_common_ion.csv'), ci_list)
         #A1.write_ion_areas_csv( os.path.join(exprdir, out_prefix +  '_aligned_ions.csv') )

@@ -26,7 +26,7 @@ align_parser.add_argument('-e', '--exprdir', required=True, help='[REQUIRED] abs
 align_parser.add_argument('-D', '--distance', required=False, default=2.5, help='local alignment: distance in retention time (seconds) over which the local peak aligner should search for similar peaks to this one', type=float)
 align_parser.add_argument('-G', '--gap', required=False, default=0.40, help='local alignment: gap penalty. Lower G results in more peaks in the output. Higher G result in fewer output peaks but possibly some peaks contain multiple merged peaks', type=float)
 align_parser.add_argument('-C', '--mincommon', required=False, default=1, help='local alignment: minimum number of samples that an aligned peak must be called in for it to be outputted', type=int)
-
+align_parser.add_argument('-TR','--transposed', required=False, default=True, help='the output matrix will show compounds as columns (True) or as rows (False)', type=bool)
 
 args = parser.parse_args()
 print args
