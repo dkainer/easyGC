@@ -241,7 +241,7 @@ def percentile_based_outlier(data, threshold=95):
 
 # added by DK. courtesy of
 # http://stackoverflow.com/questions/11686720/is-there-a-numpy-builtin-to-reject-outliers-from-a-list
-def median_outliers(data, m = 2.):
+def median_outliers(data, m = 2.5):
     data = numpy.array(data)
     d = numpy.abs(data - numpy.nanmedian(data))
     mdev = numpy.nanmedian(d)
