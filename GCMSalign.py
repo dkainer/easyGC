@@ -96,8 +96,9 @@ def detect_peaks(runs, args):
         pl_list = [p.get() for p in results]
 
         for pl in pl_list:
-            expr = store_as_expr(pl[1], pl[0], args)
-            expr_list.append(expr)
+            if len(pl[0] > 0):
+                expr = store_as_expr(pl[1], pl[0], args)
+                expr_list.append(expr)
 
         try:
             pool.terminate()
@@ -199,7 +200,7 @@ def call_peaks(im, tic, smooth, args):
             ic = im.get_ic_at_index(ii)
             #print "got ic for mass ", ii
             # ic1 = savitzky_golay(ic)
-            ic_smooth = savitzky_golay(ic, window=args.window, degree=3)
+            ic_smooth = savitzky_golay(ic, window=args.window, degree=2)
             #print "savitky golay ran "
             ic_base = tophat(ic_smooth, struct="1.5m")
             #print "tophat ran "
@@ -227,8 +228,8 @@ def call_peaks(im, tic, smooth, args):
 
     for peak in pl3:
         # peak.null_mass(73)
-        # peak.null_mass(207)
-        # peak.null_mass(84)
+        peak.null_mass(207)     # column bleed
+        peak.null_mass(84)      # solvent tailing
 
         area = peak_sum_area(im, peak)  # get the TIC area for this peak
         peak.set_area(area)
