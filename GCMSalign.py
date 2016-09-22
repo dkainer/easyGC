@@ -96,7 +96,7 @@ def detect_peaks(runs, args):
         pl_list = [p.get() for p in results]
 
         for pl in pl_list:
-            if len(pl[0] > 0):
+            if len(pl[0]) > 0:
                 expr = store_as_expr(pl[1], pl[0], args)
                 expr_list.append(expr)
 
