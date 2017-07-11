@@ -126,7 +126,7 @@ class Peak:
                     best = mass_spec[ii]
                     best2_ii = best_ii
                     best_ii = ii
-            ratio = int((100*mass_spec[best2_ii]/best)+1) - 1  #added +1 and -1 to avoid conversion error for NaN to int 
+            ratio = int(100*mass_spec[best2_ii]/(best+1))   #JT: added +1 to avoid divide by 0 error.
             UID = "%d-%d-%d-%.3f" % (int(mass_list[best_ii]),
                     int(mass_list[best2_ii]), ratio, self.__rt/minutes)
         elif self.__ic_mass != None:
