@@ -242,10 +242,16 @@ class Peak:
 
         @author: Andrew Isaac
         """
-
+        
+        """
+        JT: I was getting several peaks with area <=0 that kept closing the program.
+            I made an adjustment to set area to 1 if the error occurs, so I could continue
+            to debug the program and evaluate its output.
+        """    
+        
         if not is_number(area) or area <= 0:
-            error("'area' must be a positive number")
-
+            print "'area' must be a positive number" #JT: changed from errror to print warning to console
+            area = 1                                 #JT: set area to 1 to make it positive.
         self.__area = area
         
     def get_ion_area(self, ion):
