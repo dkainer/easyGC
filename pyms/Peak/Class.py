@@ -30,8 +30,6 @@ from pyms.Utils.Error import error
 from pyms.Utils.Utils import is_int, is_number, is_list, is_boolean, is_str
 from pyms.Utils.IO import open_for_writing, close_for_writing
 
-from numba import jit
-
 class Peak:
 
     """
@@ -44,7 +42,7 @@ class Peak:
     @author: Vladimir Likic
     @author: Andrew Isaac
     """
-    @jit
+
     # DK: added the is_outlier flag
     def __init__(self, rt=0.0, ms=None, minutes=False, outlier=False):
 
@@ -102,7 +100,7 @@ class Peak:
 
         # TEST: to test if this speeds things up
         self.rt = self.__rt
-    @jit
+
     def make_UID(self):
 
         """
@@ -128,7 +126,7 @@ class Peak:
                     best = mass_spec[ii]
                     best2_ii = best_ii
                     best_ii = ii
-            ratio = int(100*mass_spec[best2_ii]/(best+1))   #JT: added +1 to avoid divide by 0 error.
+            ratio = int(100*mass_spec[best2_ii]/best)
             UID = "%d-%d-%d-%.3f" % (int(mass_list[best_ii]),
                     int(mass_list[best2_ii]), ratio, self.__rt/minutes)
         elif self.__ic_mass != None:
@@ -137,7 +135,7 @@ class Peak:
             UID =  "%.3f" % self.__rt/minutes
 
         self.__UID = UID
-    @jit
+
     def get_UID(self):
 
         """
@@ -152,7 +150,7 @@ class Peak:
         """
 
         return self.__UID
-    @jit
+
     def get_third_highest_mz(self):
 
         """
@@ -181,7 +179,7 @@ class Peak:
 
         return int(mass_list[best3_ii])
     
-    @jit 
+    
     def set_pt_bounds(self, pt_bounds):
 
         """
@@ -206,7 +204,7 @@ class Peak:
                     error("'pt_bounds' element not an integer")
 
         self.__pt_bounds = pt_bounds
-    @jit
+
     def get_pt_bounds(self):
 
         """
@@ -220,7 +218,7 @@ class Peak:
         """
 
         return copy.deepcopy(self.__pt_bounds)
-    @jit
+
     def get_area(self):
 
         """
@@ -233,7 +231,7 @@ class Peak:
         """
 
         return self.__area
-    @jit
+
     def set_area(self, area):
 
         """
@@ -244,18 +242,12 @@ class Peak:
 
         @author: Andrew Isaac
         """
-        
-        """
-        JT: I was getting several peaks with area <=0 that kept closing the program.
-            I made an adjustment to set area to 1 if the error occurs, so I could continue
-            to debug the program and evaluate its output.
-        """    
-        
+
         if not is_number(area) or area <= 0:
-            print "'area' must be a positive number" #JT: changed from errror to print warning to console
-            area = 1                                 #JT: set area to 1 to make it positive.
+            error("'area' must be a positive number")
+
         self.__area = area
-    @jit    
+        
     def get_ion_area(self, ion):
         """
         @summary: gets the area of a single ion chromatogram
@@ -271,7 +263,7 @@ class Peak:
             return self.__ion_areas[ion]
         except KeyError:
             return None
-    @jit        
+            
     def get_ion_areas(self):
         """
         @summary: returns a copy of the ion areas dict
@@ -284,7 +276,7 @@ class Peak:
 
         return copy.deepcopy(self.__ion_areas)
 
-    @jit
+    
     def set_ion_area(self, ion, area):
         """
         @summary: sets the area for a single ion
@@ -296,7 +288,7 @@ class Peak:
         """
 
         self.__ion_areas[ion] = area
-    @jit
+
     def set_ion_areas(self, ion_areas):
         """
         @summary: set the ion:ion area pair dictionary
@@ -306,7 +298,7 @@ class Peak:
         """
 
         self.__ion_areas = ion_areas
-    @jit    
+        
     def get_int_of_ion(self, ion):
         """
         @summary: returns the intensity of a given ion
@@ -328,7 +320,7 @@ class Peak:
             intensity = None
 
         return intensity
-    @jit   
+        
     def set_ic_mass(self, mz):
 
         """
@@ -351,7 +343,7 @@ class Peak:
 
         # TEST: to test if this speeds things up
         self.mass_spec = None
-    @jit
+
     def set_mass_spectrum(self, ms):
 
         """
@@ -375,7 +367,7 @@ class Peak:
 
         # TEST: to test if this speeds things up
         self.mass_spec = ms.mass_spec
-    @jit
+
     def get_rt(self):
 
         """
@@ -386,7 +378,7 @@ class Peak:
         """
 
         return self.__rt
-    @jit
+
     def get_ic_mass(self):
 
         """
@@ -397,7 +389,7 @@ class Peak:
         """
 
         return self.__ic_mass
-    @jit
+
     def get_mass_spectrum(self):
 
         """
@@ -408,7 +400,7 @@ class Peak:
         """
 
         return copy.deepcopy(self.__mass_spectrum)
-    @jit
+
 ## TODO: What is this?
     def find_mass_spectrum(self, data, from_bounds=False):
 
@@ -451,7 +443,7 @@ class Peak:
 
         # TEST: to test if this speeds things up
         self.mass_spec = self.__mass_spectrum.mass_spec
-    @jit
+
     def crop_mass(self, mass_min, mass_max):
 
         """
@@ -505,7 +497,7 @@ class Peak:
 
         # TEST: to test if this speeds things up
         self.mass_spec = self.__mass_spectrum.mass_spec
-    @jit
+
     def null_mass(self, mass):
 
         """
@@ -544,7 +536,7 @@ class Peak:
 
         # TEST: to test if this speeds things up
         self.mass_spec = self.__mass_spectrum.mass_spec
-    @jit
+
     # DK
     def check_outlier(self):
         return self.isoutlier
