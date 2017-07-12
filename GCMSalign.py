@@ -32,8 +32,6 @@ from pyms.Display.Class import *
 
 import multiprocessing as mp
 
-from numba import jit #JT - jit test
-
 #window = 9  # width of window over which local ion maxima are detected
 #scans = 3  # distance at which locally apexing ions can be combined into one peak
 #n = 4  # min number of ions with intensity above a threshold
@@ -50,7 +48,6 @@ outdir = ""
 exprdir = ""
 
 # this is the peak detection only pipeline
-@jit
 def detect(args):
 
     # define path to data files
@@ -76,7 +73,6 @@ def detect(args):
 
 # loop over all runs and store the peaks as 'experiments'
 # within replicates alignment parameters
-@jit
 def detect_peaks(runs, args):
     expr_list = []
     pl_list = []
@@ -112,7 +108,7 @@ def detect_peaks(runs, args):
 
     return expr_list
 
-@jit
+
 def detect_one_run(run, args):
     infile = os.path.join(args.indir, run)
     print "processing GC-MS file:", infile
@@ -144,7 +140,6 @@ def detect_one_run(run, args):
 
 
 # this is the alignment-only pipeline
-@jit
 def align(args):
     global exprdir
     exprdir = args.exprdir
@@ -157,7 +152,6 @@ def align(args):
 
 
 # this is the full pipeline
-@jit
 def detect_and_align(args, chunked=False, numchunks=1):
 
     # define path to data files
@@ -192,7 +186,6 @@ window (default=7), while high complexity in data requires a higher order polyno
 
 The Durbin-Watson Classifier in OpenChrom can be used to determine the best width and order to use. A DW of 2.0 is optimal
 """
-@jit
 def call_peaks(im, tic, smooth, args):
     print "calling peaks"
     if smooth:
@@ -246,7 +239,6 @@ def call_peaks(im, tic, smooth, args):
     return pl3
 
 # creates an Experiment from a GCMS run and  writes it to a .expr file
-@jit
 def store_as_expr(run, peak_list, args):
     # create an experiment
     print "creating expression file for run ",run
@@ -261,7 +253,7 @@ def store_as_expr(run, peak_list, args):
 
     return expr
 
-@jit
+
 def load_expr_list_from_runlist(runs):
     el = []
     for run in runs:
@@ -271,7 +263,7 @@ def load_expr_list_from_runlist(runs):
 
     return el
 
-@jit
+
 def load_expr_list():
     # loads expr list from a directory of exprs
     global exprdir
@@ -286,7 +278,7 @@ def load_expr_list():
 
 
 
-@jit
+
 def load_run(infile):
 
     try:
@@ -309,7 +301,6 @@ def load_run(infile):
         # return build_intensity_matrix(data), tic
 
 # takes a list of Experiment objects and does a pairwise alignment. Optionally writes RTs, Areas and Ions to file.
-@jit
 def multi_align_local(exprlist, Dw, Gw, min_common=1, tofile=True, transposed=True):
     global exprdir
     global outdir
@@ -334,7 +325,6 @@ def multi_align_local(exprlist, Dw, Gw, min_common=1, tofile=True, transposed=Tr
 
 
 # takes a list of local alignments and aligns them globally
-@jit
 def multi_align_global(alignments_list, Db, Gb, min_common=1, tofile=True):
     print "globally aligning local alignments from list: ", alignments_list
     T1 = PairwiseAlignment(alignments_list, Db, Gb)
@@ -346,7 +336,7 @@ def multi_align_global(alignments_list, Db, Gb, min_common=1, tofile=True):
         A1.write_ion_areas_csv(expr_dir + output_prefix + 'aligned_ions.csv')
     return A1
 
-@jit
+
 def identify_peak(expr, peaknum):
     pl = expr.get_peak_list()
     ms = pl[peaknum].get_mass_spectrum()
@@ -358,7 +348,7 @@ def identify_peak(expr, peaknum):
 #            #print peak.get_rt()/60, ions
 #            ms = peak.get_mass_spectrum()
 #            print peak.get_rt()/60, output_golm_ms(ms)
-@jit
+
 def write_peak_ions_csv(expr):
     pl = expr.get_peak_list()
 
@@ -368,14 +358,14 @@ def write_peak_ions_csv(expr):
         ions = peak.peak_top_ion_areas()
         print rt / 60, ions
 
-@jit
+
 def list_peaks(expr, peak_list=None):
     if expr != None:
         peak_list = expr.get_peak_list()
     for peak in peak_list:
         print peak.get_rt() / 60, peak.get_area()
 
-@jit
+
 def peak_area_range(expr_list):
     peakareas = list()
     for expr in expr_list:
@@ -389,7 +379,7 @@ def peak_area_range(expr_list):
 
 from itertools import chain, izip
 
-@jit
+
 def output_golm_ms(ms):
     a1 = ms.mass_list
     a2 = (ms.mass_spec).tolist()
@@ -399,7 +389,6 @@ def output_golm_ms(ms):
 
 # returns a list of filenames prefix<START> to prefix<STOP>
 import random
-@jit
 def generate_runlist(prefix, first, last, randomize=False):
     l = []
     for i in range(first, last + 1):
@@ -409,7 +398,7 @@ def generate_runlist(prefix, first, last, randomize=False):
         random.shuffle(l)
     return l
 
-@jit
+
 def chunks(l, n):
     """ Yield successive n-sized chunks from l.
     """
