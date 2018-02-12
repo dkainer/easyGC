@@ -12,7 +12,8 @@ prerequisites
 - Python 2.7
 - matplotlib python package
 - netCDF
-- pycdf 0.6-3 python package (this will only work on Linux)
+- ~~pycdf 0.6-3 python package (this will only work on Linux)~~
+- NetCDF4 (see http://unidata.github.io/netcdf4-python/)
 - scipy.ndimage python package
 - openpyxl python package
  
@@ -127,5 +128,6 @@ TO DO
 
 recently implements
 -------------------
-(08/2016) parameters in peakcall for selecting min and max mass range
-(07/2016) produce excel file output with error checking results shown by cell colour (done)
+- (08/2016) parameters in peakcall for selecting min and max mass range
+- (07/2016) produce excel file output with error checking results shown by cell colour (done)
+- (02/2018) replace pycdf ANDI reader with NetCDF4 reader. MUCH better. compatible with Python 2.7 and 3.
