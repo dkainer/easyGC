@@ -31,7 +31,8 @@ from pyms.GCMS.Class import Scan
 from pyms.Utils.Error import error, stop
 from pyms.Utils.Utils import is_str, is_int, is_float, is_number, is_list
 from pyms.Utils.Time import time_str_secs
-from pycdf import *
+#from pycdf import *
+from netCDF4 import Dataset
 
 def ANDI_reader(file_name):
 
@@ -57,20 +58,30 @@ def ANDI_reader(file_name):
     if not is_str(file_name):
         error("'file_name' must be a string")
     try:
-        file = CDF(file_name)
-    except CDFError:
+        #file = CDF(file_name)
+        rootgrp = Dataset(file_name, "r+", format='NETCDF3_CLASSIC')
+    #except CDFError:
+    #    error("Cannot open file '%s'" % file_name)
+    except:     ## <TODO> to find out if netCDF4 throws specific errors that we can use here
         error("Cannot open file '%s'" % file_name)
 
     print " -> Reading netCDF file '%s'" % (file_name)
 
+    print rootgrp.variables[__MASS_STRING][:]
+
+
     scan_list = []
-    mass = file.var(__MASS_STRING)
-    intensity = file.var(__INTENSITY_STRING)
-    mass_values = mass.get().tolist()
+    # mass = file.var(__MASS_STRING)  # old pycdf way
+    # intensity = file.var(__INTENSITY_STRING)  #old pycdf way
+    mass = rootgrp.variables[__MASS_STRING][:]
+    intensity = rootgrp.variables[__INTENSITY_STRING][:]
+
+
+    mass_values = mass.tolist()
     mass_list = []
     mass_previous = mass_values[0]
     mass_list.append(mass_previous)
-    intensity_values = intensity.get().tolist()
+    intensity_values = intensity.tolist()
     intensity_list = []
     intensity_previous = intensity_values[0]
     intensity_list.append(intensity_previous)
@@ -96,8 +107,9 @@ def ANDI_reader(file_name):
             intensity_list.append(intensity_previous)
     # store final scan
     scan_list.append(Scan(mass_list, intensity_list))
-    time = file.var(__TIME_STRING)
-    time_list = time.get().tolist()
+    # time = file.var(__TIME_STRING)  #old pycdf way
+    time = rootgrp.variables[__TIME_STRING][:]
+    time_list = time.tolist()
 
     # sanity check
     if not len(time_list) == len(scan_list):
